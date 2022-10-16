@@ -37,8 +37,7 @@ HOMEWORK_STATUSES = {
 
 
 def send_message(bot, message):
-    """Отправка сообщения пользователю"""
-
+    """Отправка сообщения пользователю."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logging.info(f'Отправлено сообщение "{message}"')
@@ -47,8 +46,7 @@ def send_message(bot, message):
 
 
 def get_api_answer(current_timestamp):
-    """Отправка запроса и получение ответа от API"""
-
+    """Отправка запроса и получение ответа от API."""
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
     response = requests.get(ENDPOINT, headers=HEADERS, params=params)
@@ -60,8 +58,7 @@ def get_api_answer(current_timestamp):
 
 
 def check_response(response):
-    """Проверка ответа API"""
-
+    """Проверка ответа API."""
     if isinstance(response, dict):
         homework = response.get('homeworks')
         if len(homework) != 0:
@@ -75,8 +72,7 @@ def check_response(response):
 
 
 def parse_status(homework):
-    """Проверка статуса домашней работы"""
-
+    """Проверка статуса домашней работы."""
     keys = ('homework_name', 'status')
     for key in keys:
         if key not in homework:
@@ -93,8 +89,7 @@ def parse_status(homework):
 
 
 def check_tokens():
-    """Проверка обязательных переменных окружения"""
-
+    """Проверка обязательных переменных окружения."""
     tokens = {
         PRACTICUM_TOKEN: 'PRACTICUM_TOKEN',
         TELEGRAM_TOKEN: 'TELEGRAM_TOKEN',
@@ -113,7 +108,6 @@ def check_tokens():
 
 def main():
     """Основная логика работы бота."""
-
     check = check_tokens()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
