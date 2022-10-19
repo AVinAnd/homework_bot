@@ -1,18 +1,31 @@
+import requests
+
+
 class CheckTokenError(Exception):
+    """Отсутствует необходимая переменная окружения"""
     def __str__(self):
         return 'Отсутствует переменная окружения'
 
 
-class StatusCodeError(Exception):
+class EndPointError(Exception):
+    """Ошибка доступа к эндпоинту"""
     def __str__(self):
-        return 'Ошибка запроса. Код != 200'
-
-
-class EmptyDictError(Exception):
-    def __str__(self):
-        return 'Домашняя работа не найдена'
+        return 'Эндпоинт не доступен'
 
 
 class HomeWorkStatusError(Exception):
+    """Статус работы не соответствует ожидаемому"""
     def __str__(self):
         return 'Статус домашней работы не определен'
+
+
+class SendMessageError(Exception):
+    """Ошибка при отправке сообщения в tg"""
+    def __str__(self):
+        return 'Сбой при отправке сообщения'
+
+
+class APIKeyError(Exception):
+    """В ответе от API нет ожидаемых ключей"""
+    def __str__(self):
+        return 'Ответ API не содержит ожидаемые ключи'
