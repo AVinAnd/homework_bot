@@ -11,7 +11,6 @@ from http import HTTPStatus
 import exceptions
 
 load_dotenv()
-
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
@@ -48,11 +47,20 @@ def get_api_answer(current_timestamp):
         'headers': HEADERS,
         'params': params
     }
-    response = requests.get(**request_params)
-    if response.status_code != HTTPStatus.OK:
+    try:
+        response = requests.get(**request_params)
+        if response.status_code != HTTPStatus.OK:
+            raise exceptions.EndPointError
+    except Exception:
         raise exceptions.EndPointError
-    logging.info('Ответ API получен')
-    return response.json()
+    else:
+        try:
+            response_json = response.json()
+        except ValueError:
+            raise exceptions.ResponseJsonError
+        else:
+            logging.info('Ответ API получен')
+            return response_json
 
 
 def check_response(response):
@@ -61,29 +69,22 @@ def check_response(response):
     api_keys = ('homeworks', 'current_date')
     if not isinstance(response, dict):
         raise TypeError
-    else:
-        for key in api_keys:
-            if key not in response:
-                raise exceptions.APIKeyError
 
-        homework = response.get('homeworks')
-        if not isinstance(homework, list):
-            raise TypeError
+    for key in api_keys:
+        if key not in response:
+            raise exceptions.APIKeyError
 
-        if len(homework) != 0:
-            homework = homework[0]
+    homework = response.get('homeworks')
+    if not isinstance(homework, list):
+        raise TypeError
 
-        logging.info('Ответ API валиден')
-        return homework
+    logging.info('Ответ API валиден')
+    return homework
 
 
 def parse_status(homework):
     """Проверка статуса домашней работы."""
     logging.info('Проверка статуса домашней работы')
-    if len(homework) == 0:
-        logging.info('Список работ пуст')
-        return 'Нет актуальных работ'
-
     keys = ('homework_name', 'status')
     for key in keys:
         if key not in homework:
@@ -101,14 +102,14 @@ def check_tokens():
     """Проверка обязательных переменных окружения."""
     logging.info('Проверка переменных окружения')
     tokens = {
-        PRACTICUM_TOKEN: 'PRACTICUM_TOKEN',
-        TELEGRAM_TOKEN: 'TELEGRAM_TOKEN',
-        TELEGRAM_CHAT_ID: 'TELEGRAM_CHAT_ID'
+        'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
+        'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
+        'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID
     }
-    for token in tokens:
-        if not token:
+    for token_name, token_value in tokens.items():
+        if not token_value:
             logging.critical(
-                f'Отсутствует переменная окружения: {tokens[token]}')
+                f'Отсутствует переменная окружения: {token_name}')
             return False
     logging.info('Проверка успешна')
     return True
@@ -122,17 +123,21 @@ def main():
     current_timestamp = int(time.time())
     old_status = ''
     last_message = ''
+    message = ''
 
     if not check:
-        send_message(bot, 'Ошибка программы: Отсутствует переменная окружения')
-        raise exceptions.CheckTokenError
+        sys.exit('Ошибка программы: Отсутствует переменная окружения')
 
-    while check:
+    while True:
         try:
-            logging.info('Проверка статуса работы')
+            logging.info('Выполнение цикла')
             response = get_api_answer(current_timestamp)
             homework = check_response(response)
-            message = parse_status(homework)
+            if len(homework) != 0:
+                message = parse_status(homework[0])
+            else:
+                logging.debug('статус ответа не изменился')
+
             if message != old_status:
                 send_message(bot, message)
                 old_status = message
@@ -141,11 +146,14 @@ def main():
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logging.error(message)
+            if error == exceptions.SendMessageError:
+                pass
+
             if message != last_message:
                 send_message(bot, message)
                 last_message = message
         else:
-            logging.debug('статус ответа не изменился')
+            logging.info('Цикл выполнен без ошибок')
         finally:
             time.sleep(RETRY_TIME)
 

@@ -29,3 +29,15 @@ class APIKeyError(Exception):
     """В ответе от API нет ожидаемых ключей"""
     def __str__(self):
         return 'Ответ API не содержит ожидаемые ключи'
+
+
+class ResponseJsonError(Exception):
+    """Ошибка формата ответа API"""
+    def __str__(self):
+        return 'Ответ API не в формате JSON'
+
+
+class EmptyListError(Exception):
+    """Список домашних работ пуст"""
+    def __str__(self):
+        return 'Нет актуальных работ'
