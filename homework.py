@@ -53,14 +53,14 @@ def get_api_answer(current_timestamp):
             raise exceptions.EndPointError
     except Exception:
         raise exceptions.EndPointError
+
+    try:
+        response_json = response.json()
+    except Exception:
+        raise exceptions.ResponseJsonError
     else:
-        try:
-            response_json = response.json()
-        except ValueError:
-            raise exceptions.ResponseJsonError
-        else:
-            logging.info('Ответ API получен')
-            return response_json
+        logging.info('Ответ API получен')
+        return response_json
 
 
 def check_response(response):
@@ -68,7 +68,7 @@ def check_response(response):
     logging.info('Проверка ответа API на валидность')
     api_keys = ('homeworks', 'current_date')
     if not isinstance(response, dict):
-        raise TypeError
+        raise TypeError('Тип данных не соответствует ожидаемому (dict)')
 
     for key in api_keys:
         if key not in response:
@@ -76,7 +76,7 @@ def check_response(response):
 
     homework = response.get('homeworks')
     if not isinstance(homework, list):
-        raise TypeError
+        raise TypeError('Тип данных не соответствует ожидаемому (list)')
 
     logging.info('Ответ API валиден')
     return homework
@@ -88,7 +88,7 @@ def parse_status(homework):
     keys = ('homework_name', 'status')
     for key in keys:
         if key not in homework:
-            raise KeyError
+            raise KeyError(f'Ожидаемый ключ {key} не найден')
 
     homework_name = homework.get('homework_name')
     homework_status = homework.get('status')
@@ -118,37 +118,35 @@ def check_tokens():
 def main():
     """Основная логика работы бота."""
     logging.info('Начало работы')
-    check = check_tokens()
+    if not check_tokens():
+        sys.exit('Ошибка программы: Отсутствует переменная окружения')
+
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
     old_status = ''
     last_message = ''
     message = ''
 
-    if not check:
-        sys.exit('Ошибка программы: Отсутствует переменная окружения')
-
     while True:
         try:
             logging.info('Выполнение цикла')
             response = get_api_answer(current_timestamp)
             homework = check_response(response)
-            if len(homework) != 0:
+            if homework:
                 message = parse_status(homework[0])
             else:
-                logging.debug('статус ответа не изменился')
+                logging.debug('передан пустой список работ')
 
             if message != old_status:
                 send_message(bot, message)
                 old_status = message
 
             current_timestamp = response.get('current_date')
+        except exceptions.SendMessageError as error:
+            logging.error(error)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logging.error(message)
-            if error == exceptions.SendMessageError:
-                pass
-
             if message != last_message:
                 send_message(bot, message)
                 last_message = message
