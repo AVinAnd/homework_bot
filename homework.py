@@ -49,10 +49,11 @@ def get_api_answer(current_timestamp):
     }
     try:
         response = requests.get(**request_params)
-        if response.status_code != HTTPStatus.OK:
-            raise exceptions.EndPointError
     except Exception:
         raise exceptions.EndPointError
+
+    if response.status_code != HTTPStatus.OK:
+        raise exceptions.EndPointError('Код ответа сервера != 200')
 
     try:
         response_json = response.json()
@@ -68,7 +69,8 @@ def check_response(response):
     logging.info('Проверка ответа API на валидность')
     api_keys = ('homeworks', 'current_date')
     if not isinstance(response, dict):
-        raise TypeError('Тип данных не соответствует ожидаемому (dict)')
+        raise TypeError(
+            'Тип данных ответа сервера не соответствует ожидаемому (dict)')
 
     for key in api_keys:
         if key not in response:
@@ -76,7 +78,8 @@ def check_response(response):
 
     homework = response.get('homeworks')
     if not isinstance(homework, list):
-        raise TypeError('Тип данных не соответствует ожидаемому (list)')
+        raise TypeError(
+            'Тип данных списка работ не соответствует ожидаемому (list)')
 
     logging.info('Ответ API валиден')
     return homework
@@ -88,7 +91,7 @@ def parse_status(homework):
     keys = ('homework_name', 'status')
     for key in keys:
         if key not in homework:
-            raise KeyError(f'Ожидаемый ключ {key} не найден')
+            raise KeyError(f'Ключ {key} отсутствует в домашней работе')
 
     homework_name = homework.get('homework_name')
     homework_status = homework.get('status')
@@ -135,11 +138,13 @@ def main():
             if homework:
                 message = parse_status(homework[0])
             else:
-                logging.debug('передан пустой список работ')
+                logging.debug('Передан пустой список работ')
 
             if message != old_status:
                 send_message(bot, message)
                 old_status = message
+            else:
+                logging.info('Статус домашней работы не изменился')
 
             current_timestamp = response.get('current_date')
         except exceptions.SendMessageError as error:
